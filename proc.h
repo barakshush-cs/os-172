@@ -1,3 +1,10 @@
+/*@My:*/
+#define NUMSIG 32  
+#define defualtHandlerAdd 0xFFFF  //address for defalt handlers
+typedef void (*sighandler_t)(int); 
+#define SIGALRM 14  //Alarm signal number
+
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -63,6 +70,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  /*@My:The folowing members added as part of task1*/
+  int pending[NUMSIG];         //all currently unhandled (pending)
+  /*Each signal is associated with an action*/
+  sighandler_t sighandlers[NUMSIG]; //pointers to function that handles the signals 
+
 };
 
 // Process memory is laid out contiguously, low addresses first:

@@ -20,3 +20,7 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+/*@My*/
+#define SYS_signal 22 //task: 1.2
+#define SYS_sigsend 23 //task: 1.3
+/*****/

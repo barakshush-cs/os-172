@@ -36,6 +36,7 @@ allocproc(void)
 {
   struct proc *p;
   char *sp;
+  int defultSigHendlerIter = 0;
 
   acquire(&ptable.lock);
 
@@ -49,6 +50,13 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+
+  //set pending bitmep to zero
+  memset(p->pending, 0, sizeof(int)*NUMSIG);
+  for(defultSigHendlerIter=0;defultSigHendlerIter<NUMSIG;defultSigHendlerIter++)
+  {
+    p ->sighandlers[defultSigHendlerIter] = (sighandler_t)defualtHandlerAdd;
+  }
 
   release(&ptable.lock);
 
@@ -483,3 +491,15 @@ procdump(void)
     cprintf("\n");
   }
 }
+/*@My*/
+/*supose validitiy of arguments checked before calling,i.e
+  sigNum is valid and newHandler is not null  */
+sighandler_t 
+signal(int sigNum, sighandler_t newHandler){
+ sighandler_t prevSigHandler = proc -> sighandlers[sigNum]; 
+ proc -> sighandlers[sigNum]=newHandler;
+ cprintf("New signal handelr %d",sigNum);
+
+ return prevSigHandler;  //return the previous to newHandler handler
+}
+/*****/

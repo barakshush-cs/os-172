@@ -109,3 +109,21 @@ trap(struct trapframe *tf)
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
     exit();
 }
+/********************************************************************************************************/
+/********************************************************************************************************/
+/********************************************************************************************************/
+/********************************************************************************************************/
+/*@My code*/
+void defaultSigHandler(int sigNum){
+cprintf("A signal %d was accepted by process %d",sigNum,proc->pid);
+}
+
+
+/*check the pending var to see if theres a signal waiting to be executed, if there are,
+ set to 0 the sig_bit in the handkers array,store the current trap in tfToRestore var, 
+ put the suitable handler to exacute,set to 1 the procHandlingSigNow var */
+
+void handling_signal(void){ 
+ if(proc ==0){return;}  
+ cprintf("-----------------------------\n");
+}

@@ -33,7 +33,7 @@ alltraps:
   #@MyCode#
   #pushl %esp
   #call trap
-  #call handling_signal
+  #call checkSignals
   #addl $4, %esp
   #########
 
@@ -41,12 +41,11 @@ alltraps:
   # After trap returns, alltraps pops the argument off the stack by adding to the stack pointer (3273) and then starts execut
 .globl trapret
 trapret:
+  pushl %esp
+  call checkSignals 
+  addl $4, %esp
+  
   popal
-  #@MyCode#
-  #pushl %esp
-  #call handling_signal  //calling the function to handle signal from ks
-  #addl $4, %esp
-  #########
   popl %gs
   popl %fs
   popl %es

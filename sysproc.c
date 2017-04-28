@@ -120,3 +120,36 @@ sys_signal(void){
  }
  return (int)(signal(signal_Number, (sighandler_t)sigHandler));
 }
+
+int
+sys_sigsend(void){
+
+ int pid;
+ int sig_Num;
+ cprintf("sysproc.c : sys_sigsend nom.  for process %d \n",proc->pid);
+
+ if((argint(0,&pid) < 0) || (argint(1,&sig_Num) < 0) || (argint(1,&sig_Num) > NUMSIG)){
+   return (-1);
+ }
+
+ return sigsend(pid,sig_Num);
+
+}
+
+int 
+sys_sigreturn(void){
+ cprintf("sys_sigreturning pid: %d \n",proc->pid);
+ return (sigreturn());
+}
+
+int 
+sys_alarm(void){
+  int tick;
+ 
+  cprintf("Alarm tick: ");
+  if(argint(0, &tick) < 0)
+    return 0;
+  cprintf("%d\n",tick);
+  
+  return setAlarmTicks(tick);
+}

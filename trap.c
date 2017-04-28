@@ -53,6 +53,7 @@ trap(struct trapframe *tf)
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
+      Alarm();
     }
     lapiceoi();
     break;
@@ -123,7 +124,56 @@ cprintf("A signal %d was accepted by process %d",sigNum,proc->pid);
  set to 0 the sig_bit in the handkers array,store the current trap in tfToRestore var, 
  put the suitable handler to exacute,set to 1 the procHandlingSigNow var */
 
-void handling_signal(void){ 
- if(proc ==0){return;}  
- cprintf("-----------------------------\n");
+
+void checkSignals(struct trapframe *tf){
+  int esp, size, ret;
+  //sighandler_t sigHandlDefult=(sighandler_t)defaultSigHandler;
+  if (proc == 0) /*there is no proc*/
+    return; 
+  if (proc->ignoreSignal)/*   */
+    return; 
+  if ((tf->cs & 3) != DPL_USER)/*not going back to user mode*/
+    return;
+  
+  for(int sigIndx=0;sigIndx<NUMSIG; sigIndx++){
+    // cprintf("Checking sigggnal %d\n", sigIndx);
+    if(proc->pending[sigIndx] == 1)
+    {
+          // cprintf(" Sigggnal %d exists\n", sigIndx);
+
+      proc->pending[sigIndx] = 0;  
+      if(proc->sighandlers[sigIndx] == 0)
+      {
+        defaultSigHandler(sigIndx);/*no extern handler - go to def handler*/
+        return;
+      }
+      else{
+        proc->ignoreSignal = 1;
+
+        /*1. back up trap frame*/
+        //memmove(&proc->backUpTf, proc->tf, sizeof(struct trapframe));
+        //proc->tf->esp -= sizeof(struct trapframe);
+        //memmove((void*)proc->tf->esp, proc->tf, sizeof(struct trapframe));        
+        /*2. copy invocation to sigreturn*/
+        esp = proc->tf->esp; 
+        size = (uint)&sigreturn_ass_call_end - (uint)&sigreturn_ass_call_start;
+        esp -= size;
+        ret = esp;
+        memmove((void*)esp, sigreturn_ass_call_start, size);
+        esp -= sizeof(struct trapframe);
+        memmove((void*)esp, proc->tf, sizeof(struct trapframe)); 
+
+        /*2. set parameters for the handlers*/
+        esp -= 4;
+        *(int*)esp = sigIndx;
+        esp -= 4;
+        *(int*)esp = ret; // sigreturn address
+        /*3. Makes trapret to resume to the relevant signal handler */
+        proc->tf->eip = (uint)proc->sighandlers[sigIndx];
+        proc->tf->esp = esp;
+        return;
+      }           
+    }
+  }
 }
+

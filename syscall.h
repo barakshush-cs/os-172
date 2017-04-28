@@ -21,6 +21,8 @@
 #define SYS_mkdir  20
 #define SYS_close  21
 /*@My*/
-#define SYS_signal 22 //task: 1.2
-#define SYS_sigsend 23 //task: 1.3
+#define SYS_signal     22 //task: 1.2
+#define SYS_sigsend    23 //task: 1.3
+#define SYS_sigreturn  24 //task: 1.4
+#define SYS_alarm      25 //task: 1.5
 /*****/

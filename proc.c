@@ -55,7 +55,7 @@ found:
   memset(p->pending, 0, sizeof(int)*NUMSIG);
   for(defultSigHendlerIter=0;defultSigHendlerIter<NUMSIG;defultSigHendlerIter++)
   {
-    p ->sighandlers[defultSigHendlerIter] = (sighandler_t)defualtHandlerAdd;
+    p ->sighandlers[defultSigHendlerIter] = (sighandler_t)0;
   }
 
   release(&ptable.lock);
@@ -498,8 +498,69 @@ sighandler_t
 signal(int sigNum, sighandler_t newHandler){
  sighandler_t prevSigHandler = proc -> sighandlers[sigNum]; 
  proc -> sighandlers[sigNum]=newHandler;
- cprintf("New signal handelr %d",sigNum);
+ cprintf("register handelr %d\n",sigNum);
 
  return prevSigHandler;  //return the previous to newHandler handler
+}
+
+
+int 
+sigsend(int Pid, int sigNum){
+ 
+ if( (Pid < 0) || (sigNum < 0) || (sigNum > (NUMSIG-1)) ){
+   return (-1);
+ }
+  struct proc *p;
+  acquire(&ptable.lock);
+  
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid == Pid){
+      /*if this is the pid of the running process, update  to 1 the bit in index of this signal number in its var pending*/
+       p -> pending[sigNum] = 1;
+      release(&ptable.lock);
+      return 0;  //signal sent successfully
+    }
+  }
+  release(&ptable.lock);
+  return -1; /*signal couldnt be sent successfully for this pid is not a known one in this sys*/
+}
+
+int sigreturn(void) {
+  //cprintf("*******************************sigreturn\n");
+  proc->tf->esp += 4;
+  memmove(proc->tf, (void*)proc->tf->esp, sizeof(struct trapframe));
+  /*done handaling signal, therefor can handle other signals.
+    This (ignoreSignal) flag is set to 1 when the kernel begin
+    to handle a signal */
+  proc->ignoreSignal = 0; 
+  return 0;
+}
+
+void
+Alarm(){
+  struct proc *p;
+  acquire(&ptable.lock);
+  
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->alarm_tick > 0){
+      p->alarm_tick--;
+      cprintf("\n\n\nAlarmFunction: %d\n\n\n\n",p->alarm_tick);
+      if(p->alarm_tick==0){
+        cprintf("\n\n\nAlarmFunction\n\n\n\n");
+        p->pending[SIGALRM] = 1;
+        cprintf("pending: %d",p->pending[SIGALRM]);
+      }
+    }
+  }
+  release(&ptable.lock);
+}
+/*****/
+int 
+setAlarmTicks(int tick){
+  cprintf("setAlarmTicks\n");
+  acquire(&ptable.lock);
+  proc->alarm_tick = tick;
+  release(&ptable.lock);
+  return 0;
 }
 /*****/

@@ -29,6 +29,8 @@ int uptime(void);
 /*@My*/
 sighandler_t signal(int, sighandler_t); //task: 1.2
 int sigsend(int, int);                  //task: 1.3
+int sigreturn(void);                    //task: 1.4
+int alarm(int);                         //task: 1.5
 /*****/
 
 // ulib.c

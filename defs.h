@@ -117,7 +117,14 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-sighandler_t signal(int signum, sighandler_t handler);/*1.2*/
+
+/*@My*/
+sighandler_t signal(int signum, sighandler_t handler);//task: 1.2
+int sigsend(int pid, int signum);                     //task: 1.3
+int sigreturn(void);                                  //task: 1.4
+int alarm(void);                                      //task: 1.5
+
+/****/
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -145,6 +152,10 @@ char*           safestrcpy(char*, const char*, int);
 int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);
 char*           strncpy(char*, const char*, int);
+
+
+void            sigreturn_ass_call_start(void);
+void            sigreturn_ass_call_end(void);
 
 // syscall.c
 int             argint(int, int*);

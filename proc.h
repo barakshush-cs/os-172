@@ -1,3 +1,11 @@
+/*@My:*/
+#define NUMSIG 32  
+///#define defualtHandlerAdd 0xFFFF  
+typedef void (*sighandler_t)(int); 
+#define SIGALRM 14  
+int setAlarmTicks(int tick);
+void Alarm();
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -46,6 +54,45 @@ struct context {
   uint eip;
 };
 
+
+struct my_trapframe {
+  // registers as pushed by pusha
+  uint edi;
+  uint esi;
+  uint ebp;
+  uint oesp;      // useless & ignored
+  uint ebx;
+  uint edx;
+  uint ecx;
+  uint eax;
+
+  // rest of trap frame
+  ushort gs;
+  ushort padding1;
+  ushort fs;
+  ushort padding2;
+  ushort es;
+  ushort padding3;
+  ushort ds;
+  ushort padding4;
+  uint trapno;
+
+  // below here defined by x86 hardware
+  uint err;
+  uint eip;
+  ushort cs;
+  ushort padding5;
+  uint eflags;
+
+  // below here only when crossing rings, such as from user to kernel
+  uint esp;
+  ushort ss;
+  ushort padding6;
+};
+
+
+
+
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -63,7 +110,20 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  /*@My:The folowing members added as part of task1*/
+  int pending[NUMSIG];               //all currently unhandled (pending)
+
+  /*Each signal is associated with an action-signal handler.
+    May be defuld(kernek space) or set by user(user space)*/
+
+  sighandler_t sighandlers[NUMSIG];  //pointers to function that handles the signals 
+  struct my_trapframe backUpTf;      //backuped original trap not in use*/
+  int ignoreSignal;                  //to ensure handlin one signal at a time
+                                     //set to 1 at the beginning of signal handling
+  int alarm_tick;                    //countsdown, when 0 SIGALRM generated
 };
+
 
 // Process memory is laid out contiguously, low addresses first:
 //   text

@@ -153,3 +153,7 @@ sys_alarm(void){
   
   return setAlarmTicks(tick);
 }
+int 
+sys_getick(void){
+  return ticks;
+}

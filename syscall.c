@@ -107,6 +107,7 @@ extern int sys_signal(void);
 extern int sys_sigsend(void); 
 extern int sys_sigreturn(void);
 extern int sys_alarm(void);
+extern int sys_getick(void);
 /*****/ 
 
 static int (*syscalls[])(void) = {
@@ -136,6 +137,7 @@ static int (*syscalls[])(void) = {
 [SYS_sigsend] sys_sigsend,  
 [SYS_sigreturn] sys_sigreturn, 
 [SYS_alarm] sys_alarm, 
+[SYS_getick] sys_getick, 
 /*****/
 };
 

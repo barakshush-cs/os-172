@@ -544,7 +544,7 @@ Alarm(){
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if(p->alarm_tick > 0){
       p->alarm_tick--;
-      cprintf("\n\n\nAlarmFunction: %d\n\n\n\n",p->alarm_tick);
+      //cprintf("\n\n\nAlarmFunction: %d\n\n\n\n",p->alarm_tick);
       if(p->alarm_tick==0){
         cprintf("\n\n\nAlarmFunction\n\n\n\n");
         p->pending[SIGALRM] = 1;

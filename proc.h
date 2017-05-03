@@ -118,7 +118,7 @@ struct proc {
     May be defuld(kernek space) or set by user(user space)*/
 
   sighandler_t sighandlers[NUMSIG];  //pointers to function that handles the signals 
-  struct my_trapframe backUpTf;      //backuped original trap*/
+  struct my_trapframe backUpTf;      //backuped original trap not in use*/
   int ignoreSignal;                  //to ensure handlin one signal at a time
                                      //set to 1 at the beginning of signal handling
   int alarm_tick;                    //countsdown, when 0 SIGALRM generated

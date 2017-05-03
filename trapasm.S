@@ -29,6 +29,10 @@ alltraps:
   pushl %esp
   call trap
   addl $4, %esp
+
+  pushl %esp
+  call checkSignals 
+  addl $4, %esp
   
   #@MyCode#
   #pushl %esp

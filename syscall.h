@@ -25,4 +25,5 @@
 #define SYS_sigsend    23 //task: 1.3
 #define SYS_sigreturn  24 //task: 1.4
 #define SYS_alarm      25 //task: 1.5
+#define SYS_getick     26 //task: 2.7
 /*****/

@@ -2,35 +2,13 @@
 #define SIGALRM 14
 #define NTICKET 5
 
-#define STORE_ESP(var)  asm("movl %%esp, %0;" : "=r" ( var ))
 
-// Loads the contents of var into esp
-#define LOAD_ESP(var)   asm("movl %0, %%esp;" : : "r" ( var ))
-
-
-// Saves the value of esp to var
-#define STORE_EBP(var)  asm("movl %%ebp, %0;" : "=r" ( var ))
-
-// Loads the contents of var into esp
-#define LOAD_EBP(var)   asm("movl %0, %%ebp;" : : "r" ( var ))
-
-// Calls the function func
-#define CALL(addr)              asm("call *%0;" : : "r" ( addr ))
-
-// Pushes the contents of var to the stack
-#define PUSH(var)               asm("movl %0, %%edi; push %%edi;" : : "r" ( var ))
-
-
-
-// thread states
 typedef enum  {FREE, RUNNING, RUNNABLE, SLEEP} uthread_state;
 
-// stack size
-#define STACK_SIZE  4096
-// max number of thread allowed
-#define MAX_THREADS  7
 
-// uthread required functions
+#define STACK_SIZE  4096
+#define MAX_THREADS  62
+
 int uthread_init();
 
 int uthread_create(void (*start_func)(void *), void* arg);
@@ -42,6 +20,10 @@ void uthread_exit();
 int uthread_self();
 
 int uthread_join(int tid);
+
+int uthread_sleep(int ticks);
+
+void storeRegisters();
 
 struct my_trapframe {
   // registers as pushed by pusha
@@ -78,17 +60,25 @@ struct my_trapframe {
   ushort padding6;
 };
 
-struct uthread {
-	// thread id
+typedef struct uthread {
+	
 	int	tid;
-	// stack pointer
+	/*stack*/
 	int esp;      
-	// base pointer
-	int ebp;      
-	// thread stack
+	/*base pointer*/
+	int ebp;
+	/*programm counter*/
+	int eip;      
+	/*stack*/
 	char *stack;	   
-	// thread state
+	/*thread state*/
 	uthread_state state;
+	/*backedup trape frame*/
 	struct my_trapframe tf;
-};
+	/*first Run*/
+	int firstRun;
+	/*sleepContDown*/
+	int sleepContDown;
+
+}uthread;
  

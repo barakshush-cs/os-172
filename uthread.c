@@ -2,172 +2,90 @@
 #include "user.h"
 #include "uthread.h"
 #include "x86.h"
-struct my_trapframe {
-  // registers as pushed by pusha
-  uint edi;
-  uint esi;
-  uint ebp;
-  uint oesp;      // useless & ignored
-  uint ebx;
-  uint edx;
-  uint ecx;
-  uint eax;
-
-  // rest of trap frame
-  ushort gs;
-  ushort padding1;
-  ushort fs;
-  ushort padding2;
-  ushort es;
-  ushort padding3;
-  ushort ds;
-  ushort padding4;
-  uint trapno;
-
-  // below here defined by x86 hardware
-  uint err;
-  uint eip;
-  ushort cs;
-  ushort padding5;
-  uint eflags;
-
-  // below here only when crossing rings, such as from user to kernel
-  uint esp;
-  ushort ss;
-  ushort padding6;
-};
 
 
-void FUNC1(void *arg) {
-  int i;
-  for(i = 0; i < 150; i++) {
-    printf(1, "FUNCTION1: %d \n",i);
-  }
-}
+/*GLOBAL*/
+int id_for_next_thread;                   //index of next tid
+int curr_thread_index;                    //current running thread
+struct uthread thread_table[MAX_THREADS]; //user level thread table
 
-void FUNC2(void *arg) {
-  int i;
-  for(i = 0; i < 150; i++) {
-    printf(1, "FUNCTION2: %d \n",i);
-  }
-}
-
-void FUNC3(void *arg) {
-  int i;
-  for(i = 0; i < 150; i++) {
-    printf(1, "FUNCTION3: %d \n",i);
-  }
-}
-	void alarm_sch(void *arg){
-	 printf(1,"\n***********************ALARM Handler*************************************\n ");
-	 alarm(5);
-	}
-
-
-
-// array of utherad structs
-struct uthread uthread_pool[MAX_THREADS];
-// next pid to run
-int next_tid;
-// current running thread index
-int c_uthread_index;
-// current number of tickets
-int current_ticket_num;
-// choosen lottery thread
-int choosen;
-
-static void 
-execute_thread(void (*start_func)(void *), void* arg) {
-  printf(1, "+++RUN THREAD+++ \n");
-  alarm(UTHREAD_QUANTA);
-  start_func(arg);
-  uthread_exit();
-}
 
 int
 uthread_init()
 {
   printf(1, "** INIT USER LEVEL THREAD **\n");
-  // set all threads state to FREE - init pool
+  
   int i;
   for(i = 0; i < MAX_THREADS; ++i) {
-    uthread_pool[i].state = FREE;
-  }
+    thread_table[i].state = FREE;
+    }
 
-  next_tid = 1;
+  id_for_next_thread = 1;
 
-  // initialize main thread
-  c_uthread_index = 0;
-  // set tid and stack to null
-  uthread_pool[c_uthread_index].tid = 0;
-  uthread_pool[c_uthread_index].stack = 0; 
-  // main thread is ready to run
-  uthread_pool[c_uthread_index].state = RUNNING;
+  curr_thread_index = 0;
+  thread_table[curr_thread_index].tid = 0;
+  thread_table[curr_thread_index].stack = 0; 
+  thread_table[curr_thread_index].state = RUNNING;
 
-  // register the SIGALRM to uthread_yield func
-  if(signal(SIGALRM,(sighandler_t) uthread_schedule) != 0) {
-    // case signal error
+  /*set signal SIGALRM handler to be the scheduler*/
+  if(signal(SIGALRM, (sighandler_t)uthread_schedule) != 0) {
     return -1;
   }
 
-  // execute the alarm syscall with UTHREAD_QUANTA
+  /*set quanta*/
   alarm(UTHREAD_QUANTA);
 
   return 0;
 }
 
-
 int 
 uthread_create(void (*func)(void *), void* arg)
 {
-  printf(1, "start thread creation \n");
-
-  // local thread pool index
   int i;
 
-  // disable thread switching
+  printf(1, "-------------------uthread_create------------------- \n\n");
+  /*disable context switch*/
   alarm(0);
 
-  printf(1, "uthread_create after alarm(0) \n");
-
-  // search for free thread to load
+  /*look for empty entery*/
   for(i = 0; i < MAX_THREADS; ++i) {
-    if (uthread_pool[i].state == FREE) {
-      goto load_t;
+    if (thread_table[i].state == FREE) {
+      goto creat_thread;
     }
   }
 
-  // case no free threads available
-  // enable thread switching
   alarm(UTHREAD_QUANTA);
   return -1;
 
-load_t:
-  // next free tid to assign
-  uthread_pool[i].tid = next_tid;
-  // update next tid
-  next_tid++;
-  // allocate stack for thread and returns the stack top to .stack field
-  uthread_pool[i].stack = malloc(STACK_SIZE);
+creat_thread:
+  thread_table[i].tid = id_for_next_thread;
+  id_for_next_thread++;
+  /*allocation of uesr level thread stack*/ 
+  thread_table[i].stack = malloc(STACK_SIZE);
 
-  // load thread execute function to stack with arguments and return value
-  *( (int*)(uthread_pool[i].stack + STACK_SIZE - 3*sizeof(int)) ) = 0; 
-  *( (int*)(uthread_pool[i].stack + STACK_SIZE - 2*sizeof(int)) ) = (int)func;
-  *( (int*)(uthread_pool[i].stack + STACK_SIZE - sizeof(int)) ) = (int)arg;
+  /*set the general porpose registers to 0*/
+  memset(&thread_table[i].tf, 0, sizeof(struct my_trapframe));
 
-  // set thread state to RUNNABLE, ready to run
-  uthread_pool[i].state = RUNNABLE;
+  thread_table[i].esp = (uint)(thread_table[i].stack+STACK_SIZE);
+  
+  /*push args*/
+  thread_table[i].esp -= 4;
+  *((uint*)thread_table[i].esp) = (uint)arg;
+  /*push call to exit*/
+  thread_table[i].esp -= 4;
+  *((uint*)thread_table[i].esp) = (uint)uthread_exit;
+  thread_table[i].ebp = thread_table[i].esp;
+  thread_table[i].eip = (uint)func;
+  thread_table[i].firstRun = 1;
 
-  // set esp and ebp to null, while thread is not in RUNNING state yet
-  uthread_pool[i].esp = 0;
-  uthread_pool[i].ebp = 0;
+  /*set state*/
+  thread_table[i].state = RUNNABLE;
   
 
-  // enable thread switching
-  printf(1, "creation method: returning.. \n");
+  /*context switch*/
+  printf(1, "NEW thread  allocaTED\n");
   alarm(UTHREAD_QUANTA);
-
-  return uthread_pool[i].tid;
+  return thread_table[i].tid;
 }
 
 void 
@@ -175,91 +93,82 @@ uthread_exit(void)
 {
 
   int i;
+  printf(1, "-------------====EXIT====------------- \n");
 
-  // disable thread switching
+  /*disable context switch*/
   alarm(0);
-
-  // deallocate thread memory
-  if (uthread_pool[c_uthread_index].stack != 0) {
-    free(uthread_pool[c_uthread_index].stack);
+  /*stack dealloction*/
+  if (thread_table[curr_thread_index].stack != 0) {
+    free(thread_table[curr_thread_index].stack);
+    thread_table[curr_thread_index].stack = 0;
+    thread_table[curr_thread_index].tid = -1;
   }
 
-  // deallocate thread from thread pool
-  uthread_pool[c_uthread_index].state = FREE;
+  /*clear entery of outgoing thread*/
+  thread_table[curr_thread_index].state = FREE;
 
-  // if any thread is waiting for current thread, get them back to RUNNABLE state
+  /*Take care of waiting threds*/
   for(i = 0; i < MAX_THREADS; ++i) {
-    if (uthread_pool[i].state == SLEEP) {
-      uthread_pool[i].state = RUNNABLE;
+    if (thread_table[i].state == SLEEP) {
+      thread_table[i].state = RUNNABLE;
     }
   }
-
-  // Check if there are any other uthread_pool that can be switched to
-  for(i = 0; i < MAX_THREADS; ++i) {
-    if (uthread_pool[i].state != FREE) {
-      // found thread that is eligible to run, yield
-      uthread_schedule();
+  /*if there is a non empty entry - trig context switch
+    else freform exit */
+  for(i = 1; i < MAX_THREADS; ++i) {
+    if (thread_table[i].state != FREE) {
+      sigsend(getpid(), SIGALRM);
     }
   }
-  // no ready to run threads, exit
+  printf(1, "-------------====EXIT after loop------------- \n");
   exit();
 }
-
 
 void 
 uthread_schedule(void)
 {
-	int esp = 0;
-  // switch alarm(0) to cancel thread switching while yielding 
-  alarm(0);
-  printf(1, "******************SCHEDUALE******************\n");
-
-  // if current thread is running (most cases), the thread didn't finisht its job so turn his state to RUNNABLE
-  if (uthread_pool[c_uthread_index].state == RUNNING) {
-    uthread_pool[c_uthread_index].state = RUNNABLE;
-  }
-
-  // save current thread esp and ebp
-  asm("movl %%esp, %0;" : "=r" (uthread_pool[c_uthread_index].esp));
+  uint esp = 0;
+  int prev_thread=curr_thread_index;
   asm("movl %%esp, %0;" : "=r" (esp));
-  esp = esp+36;
-  uthread_pool[c_uthread_index].tf = (struct my_trapframe)*esp;
-  asm("movl %%ebp, %0;" : "=r" (uthread_pool[c_uthread_index].ebp));
+  int f=1;
+  /*disable contetxt switch*/ 
+  alarm(0);
+  /*Last thread can be free*/
+  if ((thread_table[curr_thread_index].state == RUNNING) & f) {
+    thread_table[curr_thread_index].state = RUNNABLE;
+  }
+  /*save trap frame*/
+  memmove(&thread_table[curr_thread_index].tf,(void*)(esp+24),sizeof(struct my_trapframe));
 
-  // load the new thread
-
-  // pick the next thread index
-    
-  int iterator=c_uthread_index;
+  /*find next thred in a round eobin manner*/    
+  int iterator=curr_thread_index;
   iterator = (iterator+1)%MAX_THREADS;
-  
 
-  //WE HOPE USER WON'T BE STUPID AND SLEEP ON SLEEPING THREAD
   for(;; iterator = (iterator+1)%MAX_THREADS)
-    if(uthread_pool[iterator].state == RUNNABLE){
+    if(thread_table[iterator].state == RUNNABLE){
+    	//printf(1, "RUNNABLE******************,%d\n",iterator);
       break;
     }
-  c_uthread_index = iterator;
+  curr_thread_index = iterator;
+  /*new thread in running*/
+  thread_table[curr_thread_index].state = RUNNING;
 
-  // ****************************************************************** //
+  if(thread_table[curr_thread_index].firstRun) 
+  {
+  	thread_table[curr_thread_index].firstRun = 0;
+  	thread_table[curr_thread_index].tf = thread_table[prev_thread].tf;
+  	thread_table[curr_thread_index].tf.esp = thread_table[curr_thread_index].esp;
+  	thread_table[curr_thread_index].tf.eip = thread_table[curr_thread_index].eip;
+  	thread_table[curr_thread_index].tf.ebp = thread_table[curr_thread_index].ebp;
 
-  // current switched thread is move to RUNNING mode, next to be execute
-  uthread_pool[c_uthread_index].state = RUNNING;
-
-
-  // if esp is null, thread is running its first time, so we have to load a functio to it 
-  if(uthread_pool[c_uthread_index].esp == 0) {
-    asm("movl %0, %%esp;" : : "r" (uthread_pool[c_uthread_index].stack + STACK_SIZE - 3*sizeof(int)));
-    asm("movl %0, %%ebp;" : : "r" (uthread_pool[c_uthread_index].stack + STACK_SIZE - 3*sizeof(int)));
-    // jump to execute function to run the thread own function
-    asm("jmp *%0;" : : "r" (execute_thread));
+  	memmove((void*)(esp+24),&thread_table[curr_thread_index].tf,sizeof(struct my_trapframe));
+  	printf(1,"prev_thread %d\n",prev_thread);
+  	alarm(UTHREAD_QUANTA);
   } 
   else  {
-    // restore thread stack
-    asm("movl %0, %%esp;" : : "r" (uthread_pool[c_uthread_index].esp));
-    asm("movl %0, %%ebp;" : : "r" (uthread_pool[c_uthread_index].ebp));
-
-    // reset alarm
+    /*restore trap frame*/
+    memmove((void*)(esp+24),&thread_table[curr_thread_index].tf,sizeof(struct my_trapframe));
+    /*set quanta again- eneble context switch*/
     alarm(UTHREAD_QUANTA);
   }
 }
@@ -267,42 +176,45 @@ uthread_schedule(void)
 int 
 uthred_self(void)
 {
-  // return current running thread tid
-  return uthread_pool[c_uthread_index].tid;
+  return thread_table[curr_thread_index].tid;
 }
 
 int  
-uthred_join(int tid)
+uthread_join(int tid)
 {
   int i;
-
-  // if tid is not declared yet or is a negative number, error occured, return
-  if(tid >= next_tid || tid < 0) {
+  /*cheks tid validity
+    If that thread has already terminated/not exists, 
+    then uthread_join returns immediately.*/
+  if(tid >= id_for_next_thread || tid < 0) {
     return -1;
   }
 
-loop:
-
-  // disable thread switching
+wait_until_termination:
   alarm(0);
-
-  // run over all threads
   for(i = 0; i < MAX_THREADS; ++i) {
-    // searching for a thread with the relevant tid
-    if(uthread_pool[i].tid == tid) {
-      // put current running thread to sleep
-      uthread_pool[c_uthread_index].state = SLEEP;
-      // let other thread to run 
-      uthread_schedule();
-
-      // if thread still alive, loop over the join procedure again
-      goto loop;
+    if(thread_table[i].tid == tid) {
+      thread_table[curr_thread_index].state = SLEEP; 
+      sigsend(getpid(), SIGALRM);
+      goto wait_until_termination;
 
     }
   }
-
-  // the joined thread is not alive anyway, reset clock
+  /*wake up*/
   alarm(UTHREAD_QUANTA);
-
   return 0;
+}
+
+int 
+uthread_sleep(int ticks) {
+	uint start_time = uptime();
+	printf(1,"*****************SLEEP*******************\n");
+	printf(1, "Thread id:  %d went in to sleep state for %d ticks\n", thread_table[curr_thread_index].tid, ticks);	
+	while (uptime() - start_time < ticks) {
+		printf(1, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ...\n");
+		printf(1, "Thread id:  %d  is sleeping\n", thread_table[curr_thread_index].tid);
+		sigsend(getpid(), SIGALRM);
+	}	
+	printf(1, "Thread: %d is WAKING UP\n", thread_table[curr_thread_index].tid);
+	return 0;
 }

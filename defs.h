@@ -123,6 +123,7 @@ sighandler_t signal(int signum, sighandler_t handler);//task: 1.2
 int sigsend(int pid, int signum);                     //task: 1.3
 int sigreturn(void);                                  //task: 1.4
 int alarm(void);                                      //task: 1.5
+int getick(void);									  //task: 2
 
 /****/
 

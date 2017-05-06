@@ -1,4 +1,11 @@
 #include "mmu.h"
+#;As part of
+#;saving the general-purpose registers, alltraps also saves %eax, which contains the
+#;system call number for the kernel to inspect later.
+#Now that the user mode processor registers are saved, alltraps can finishing setting
+#up the processor to run kernel C code. 
+
+
 
   # vectors.S sends all traps here.
 .globl alltraps
@@ -17,15 +24,31 @@ alltraps:
   movw $(SEG_KCPU<<3), %ax
   movw %ax, %fs
   movw %ax, %gs
-
+  # Once the segments are set properly, alltraps can call the C trap handler trap
   # Call trap(tf), where tf=%esp
   pushl %esp
   call trap
   addl $4, %esp
 
+  pushl %esp
+  call checkSignals 
+  addl $4, %esp
+  
+  #@MyCode#
+  #pushl %esp
+  #call trap
+  #call checkSignals
+  #addl $4, %esp
+  #########
+
   # Return falls through to trapret...
+  # After trap returns, alltraps pops the argument off the stack by adding to the stack pointer (3273) and then starts execut
 .globl trapret
 trapret:
+  pushl %esp
+  call checkSignals 
+  addl $4, %esp
+  
   popal
   popl %gs
   popl %fs

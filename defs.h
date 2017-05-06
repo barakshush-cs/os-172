@@ -1,3 +1,4 @@
+typedef void (*sighandler_t)(int);
 struct buf;
 struct context;
 struct file;
@@ -117,6 +118,13 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 
+sighandler_t    signal(int signum, sighandler_t handler);
+int             sigsend(int pid, int signum);                     
+int             sigreturn(void);                                  
+int             alarm(void);                                      
+int             getick(void);									  
+
+
 // swtch.S
 void            swtch(struct context**, struct context*);
 
@@ -143,6 +151,10 @@ char*           safestrcpy(char*, const char*, int);
 int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);
 char*           strncpy(char*, const char*, int);
+
+
+void            sigreturn_ass_call_start(void);
+void            sigreturn_ass_call_end(void);
 
 // syscall.c
 int             argint(int, int*);

@@ -53,6 +53,7 @@ trap(struct trapframe *tf)
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
+      Alarm();
     }
     lapiceoi();
     break;
@@ -109,3 +110,78 @@ trap(struct trapframe *tf)
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
     exit();
 }
+
+
+void 
+defaultSigHandler(int sigNum){
+cprintf("A signal %d was accepted by process %d",sigNum,proc->pid);
+}
+
+
+/*check the pending var to see if theres a signal waiting to be executed, if there are,
+ set to 0 the sig_bit in the handkers array,store the current trap in tfToRestore var, 
+ put the suitable handler to exacute,set to 1 the procHandlingSigNow var */
+
+
+void 
+checkSignals(struct trapframe *tf){
+  int esp, size, ret;
+  //sighandler_t sigHandlDefult=(sighandler_t)defaultSigHandler;
+  if (proc == 0) /*there is no proc*/
+    return; 
+  if (proc->ignoreSignal)/*   */
+     return; 
+  if ((tf->cs & 3) != DPL_USER)/*not going back to user mode*/
+    return;
+  //cprintf("checkSignals\n");
+  for(int sigIndx=0;sigIndx<NUMSIG; sigIndx++){
+    // cprintf("Checking sigggnal %d\n", sigIndx);
+    if(proc->pending[sigIndx] == 1)
+    {
+          // cprintf(" Sigggnal %d exists\n", sigIndx);
+
+      proc->pending[sigIndx] = 0;  
+      if(proc->sighandlers[sigIndx] == 0)
+      {
+        defaultSigHandler(sigIndx);/*no extern handler - go to def handler*/
+        return;
+      }
+      else{
+        proc->ignoreSignal = 1;
+        
+        /*1. copy invocation of sigreturn to user stack*/
+        esp = proc->tf->esp; 
+        size = (uint)&sigreturn_ass_call_end - (uint)&sigreturn_ass_call_start;
+        esp -= size;
+        ret = esp;
+        memmove((void*)esp, sigreturn_ass_call_start, size);
+        /*2. back up trap frame by pushing it to user stack*/
+        esp -= sizeof(struct trapframe);
+         /*  cprintf("trap: esp %d\n",esp);
+             cprintf("trap: proc->tf->edi %d\n",proc->tf->edi);
+             cprintf("trap: proc->tf->esi %d\n",proc->tf->esi);
+             cprintf("trap: proc->tf->ebp %d\n",proc->tf->ebp);
+             cprintf("trap: proc->tf->oesp %d\n",proc->tf->oesp);
+             cprintf("trap: proc->tf->ebx %d\n",proc->tf->ebx);
+             cprintf("trap: proc->tf->edx %d\n",proc->tf->edx);
+             cprintf("trap: proc->tf->ecx %d\n",proc->tf->ecx);
+             cprintf("trap: proc->tf->eax %d\n",proc->tf->eax);*/
+        
+
+        memmove((void*)esp, proc->tf, sizeof(struct trapframe)); 
+
+        /*3. Push to user stack the parameter of signal handler function*/
+        esp -= 4;
+        *(int*)esp = sigIndx;
+        esp -= 4;
+        *(int*)esp = ret; // sigreturn address points to invocation of sigreturn
+        /*3. trapret will return to eip adress */
+        proc->tf->eip = (uint)proc->sighandlers[sigIndx];
+        proc->tf->esp = esp;
+        
+        return;
+      }           
+    }
+  }
+}
+

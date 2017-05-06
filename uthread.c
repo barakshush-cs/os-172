@@ -79,8 +79,7 @@ creat_thread:
   thread_table[i].firstRun = 1;
 
   /*set state*/
-  thread_table[i].state = RUNNABLE;
-  
+  thread_table[i].state = RUNNABLE; 
 
   /*context switch*/
   printf(1, "NEW thread  allocaTED\n");
@@ -115,7 +114,7 @@ uthread_exit(void)
   }
   /*if there is a non empty entry - trig context switch
     else freform exit */
-  for(i = 1; i < MAX_THREADS; ++i) {
+  for(i = 0; i < MAX_THREADS; ++i) {
     if (thread_table[i].state != FREE) {
       sigsend(getpid(), SIGALRM);
     }
@@ -174,7 +173,7 @@ uthread_schedule(void)
 }
 
 int 
-uthred_self(void)
+uthread_self(void)
 {
   return thread_table[curr_thread_index].tid;
 }
@@ -209,12 +208,26 @@ int
 uthread_sleep(int ticks) {
 	uint start_time = uptime();
 	printf(1,"*****************SLEEP*******************\n");
-	printf(1, "Thread id:  %d went in to sleep state for %d ticks\n", thread_table[curr_thread_index].tid, ticks);	
+	//printf(1, "Thread id:  %d went in to sleep state for %d ticks\n", thread_table[curr_thread_index].tid, ticks);	
 	while (uptime() - start_time < ticks) {
-		printf(1, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ...\n");
-		printf(1, "Thread id:  %d  is sleeping\n", thread_table[curr_thread_index].tid);
+		//printf(1, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ...\n");
+		//printf(1, "Thread id:  %d  is sleeping\n", thread_table[curr_thread_index].tid);
 		sigsend(getpid(), SIGALRM);
 	}	
-	printf(1, "Thread: %d is WAKING UP\n", thread_table[curr_thread_index].tid);
+	//printf(1, "Thread: %d is WAKING UP\n", thread_table[curr_thread_index].tid);
 	return 0;
+}
+void
+sleep_on_semaphore(){
+  thread_table[curr_thread_index].state = BLOCKED;
+}
+
+int
+wake_up(){
+  for(int iterator = 0;iterator<MAX_THREADS;iterator++){
+    if(thread_table[iterator].state == BLOCKED){
+      thread_table[iterator].state = RUNNABLE;
+    }
+  }
+  return 0;    
 }

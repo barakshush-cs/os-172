@@ -546,9 +546,9 @@ Alarm(){
       p->alarm_tick--;
       //cprintf("\n\n\nAlarmFunction: %d\n\n\n\n",p->alarm_tick);
       if(p->alarm_tick==0){
-        cprintf("\n\n\nAlarmFunction\n\n\n\n");
+        //cprintf("\n\n\nAlarmFunction\n\n\n\n");
         p->pending[SIGALRM] = 1;
-        cprintf("pending: %d",p->pending[SIGALRM]);
+        //cprintf("pending: %d",p->pending[SIGALRM]);
       }
     }
   }
@@ -557,7 +557,7 @@ Alarm(){
 /*****/
 int 
 setAlarmTicks(int tick){
-  cprintf("setAlarmTicks\n");
+  //cprintf("setAlarmTicks\n");
   acquire(&ptable.lock);
   proc->alarm_tick = tick;
   release(&ptable.lock);

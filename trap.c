@@ -110,12 +110,10 @@ trap(struct trapframe *tf)
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
     exit();
 }
-/********************************************************************************************************/
-/********************************************************************************************************/
-/********************************************************************************************************/
-/********************************************************************************************************/
-/*@My code*/
-void defaultSigHandler(int sigNum){
+
+
+void 
+defaultSigHandler(int sigNum){
 cprintf("A signal %d was accepted by process %d",sigNum,proc->pid);
 }
 
@@ -125,7 +123,8 @@ cprintf("A signal %d was accepted by process %d",sigNum,proc->pid);
  put the suitable handler to exacute,set to 1 the procHandlingSigNow var */
 
 
-void checkSignals(struct trapframe *tf){
+void 
+checkSignals(struct trapframe *tf){
   int esp, size, ret;
   //sighandler_t sigHandlDefult=(sighandler_t)defaultSigHandler;
   if (proc == 0) /*there is no proc*/

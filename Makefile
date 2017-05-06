@@ -138,7 +138,7 @@ tags: $(OBJS) entryother.S _init
 vectors.S: vectors.pl
 	perl vectors.pl > vectors.S
 
-ULIB = ulib.o usys.o printf.o umalloc.o uthread.o
+ULIB = ulib.o usys.o printf.o umalloc.o uthread.o semaphore.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
@@ -172,13 +172,14 @@ UPROGS=\
 	_mkdir\
 	_rm\
 	_sh\
+	_sanity\
 	_stressfs\
 	_usertests\
 	_wc\
 	_zombie\
-    _testEx1\
     _t\
     _t2\
+    
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

@@ -1,30 +1,20 @@
 #define UTHREAD_QUANTA 5
-#define SIGALRM 14
-#define NTICKET 5
+#define SIGALRM        14
+#define STACK_SIZE     4096
+#define MAX_THREADS    62
 
+typedef enum  {FREE, RUNNING, RUNNABLE, SLEEP,BLOCKED} uthread_state;
 
-typedef enum  {FREE, RUNNING, RUNNABLE, SLEEP} uthread_state;
-
-
-#define STACK_SIZE  4096
-#define MAX_THREADS  62
-
-int uthread_init();
-
-int uthread_create(void (*start_func)(void *), void* arg);
-
-void uthread_schedule();
-
-void uthread_exit();
-
-int uthread_self();
-
-int uthread_join(int tid);
-
-int uthread_sleep(int ticks);
-
-void storeRegisters();
-
+int    uthread_init();
+int    uthread_create(void (*start_func)(void *), void* arg);
+void   uthread_schedule();
+void   uthread_exit();
+int    uthread_self();
+int    uthread_join(int tid);
+int    uthread_sleep(int ticks);
+int    wake_up();
+void   sleep_on_semaphore();
+void   storeRegisters();
 struct my_trapframe {
   // registers as pushed by pusha
   uint edi;

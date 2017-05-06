@@ -32,7 +32,33 @@ int sigsend(int, int);                  //task: 1.3
 int sigreturn(void);                    //task: 1.4
 int alarm(int);                         //task: 1.5
 int getick(void);                       //task: 1.5
-/*****/
+
+// uthread.c
+int  uthread_init();
+int  uthread_create(void (*start_func)(void *), void* arg);
+void uthread_schedule();
+void uthread_exit();
+int  uthread_self();
+int  uthread_join(int tid);
+int  uthread_sleep(int ticks);
+
+// semaphore.c
+int  bsem_alloc();
+void bsem_free(int);
+void bsem_down(int);
+void bsem_up(int);
+
+struct counting_semaphore {
+	int binary_descriptor1;
+	int binary_descriptor2;
+	int value;
+};
+struct counting_semaphore*  counting_semaphore_alloc(int value);
+void sem_free(struct counting_semaphore* sem);
+void down(struct counting_semaphore *sem);
+void up(struct counting_semaphore *sem);
+
+
 
 // ulib.c
 int stat(char*, struct stat*);

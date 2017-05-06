@@ -118,14 +118,12 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 
-/*@My*/
-sighandler_t signal(int signum, sighandler_t handler);//task: 1.2
-int sigsend(int pid, int signum);                     //task: 1.3
-int sigreturn(void);                                  //task: 1.4
-int alarm(void);                                      //task: 1.5
-int getick(void);									  //task: 2
+sighandler_t    signal(int signum, sighandler_t handler);
+int             sigsend(int pid, int signum);                     
+int             sigreturn(void);                                  
+int             alarm(void);                                      
+int             getick(void);									  
 
-/****/
 
 // swtch.S
 void            swtch(struct context**, struct context*);
